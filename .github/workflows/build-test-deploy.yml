@@ -1,0 +1,53 @@
+name: ASP.NET Core CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    name: Build & Run Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code Repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 9.0 SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore NuGet Dependencies
+      run: dotnet restore UserProfileManagement.sln
+
+    - name: Build ASP.NET Core Solution (Release)
+      run: dotnet build UserProfileManagement.sln --configuration Release --no-restore
+
+    - name: Execute Automated Test Suite (xUnit)
+      run: dotnet test UserProfileManagement.Tests/UserProfileManagement.Tests.csproj --configuration Release --no-build --verbosity normal
+
+  publish-and-deploy:
+    name: Publish Release Artifacts
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code Repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 9.0 SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Publish ASP.NET Core Web App
+      run: dotnet publish UserProfileManagement.csproj --configuration Release --output ./publish
+
+    - name: Upload Production Deployment Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: user-profile-management-build
+        path: ./publish
